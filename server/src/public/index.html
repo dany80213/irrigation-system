@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🌿 Irrigazione Smart</title>
+    <meta
+      name="description"
+      content="Dashboard per il controllo del sistema di irrigazione smart basato su ESP32"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ─── HEADER ──────────────────────────────────── -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-icon">🌱</span>
+          <h1>Irrigazione Smart</h1>
+        </div>
+        <div id="clock" class="clock"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- ─── DEVICE CARD ───────────────────────────── -->
+      <section class="card card-device" id="device-card">
+        <div class="card-header">
+          <h2>📡 Dispositivo</h2>
+          <span class="status-badge" id="status-badge">
+            <span class="status-dot"></span>
+            <span class="status-text">Caricamento…</span>
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="info-row">
+            <span class="info-label">Indirizzo IP</span>
+            <span class="info-value" id="device-ip">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Stato Pompa</span>
+            <span class="info-value" id="pump-state">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ultimo aggiornamento</span>
+            <span class="info-value" id="last-update">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── MANUAL CONTROLS ───────────────────────── -->
+      <section class="card card-controls">
+        <div class="card-header">
+          <h2>🎛️ Controllo Manuale</h2>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">Accendi o spegni la pompa manualmente.</p>
+          <div class="btn-group">
+            <button class="btn btn-on" id="btn-on" onclick="sendPump('on')">
+              <span class="btn-icon">💧</span> ACCENDI
+            </button>
+            <button class="btn btn-off" id="btn-off" onclick="sendPump('off')">
+              <span class="btn-icon">🚫</span> SPEGNI
+            </button>
+          </div>
+          <div class="feedback" id="manual-feedback"></div>
+        </div>
+      </section>
+
+      <!-- ─── TIMED IRRIGATION ──────────────────────── -->
+      <section class="card card-timed">
+        <div class="card-header">
+          <h2>⏱️ Irrigazione a Tempo</h2>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Accendi la pompa per una durata specifica, poi si spegnerà
+            automaticamente.
+          </p>
+          <div class="timed-form">
+            <div class="input-group">
+              <input
+                type="number"
+                id="timed-value"
+                min="1"
+                max="120"
+                value="30"
+                class="input"
+              />
+              <select id="timed-unit" class="input select">
+                <option value="sec">Secondi</option>
+                <option value="min">Minuti</option>
+              </select>
+            </div>
+            <button class="btn btn-timed" onclick="sendTimedIrrigation()">
+              <span class="btn-icon">🚀</span> Avvia
+            </button>
+          </div>
+          <div class="feedback" id="timed-feedback"></div>
+        </div>
+      </section>
+
+      <!-- ─── SCHEDULED IRRIGATION ──────────────────── -->
+      <section class="card card-schedule">
+        <div class="card-header">
+          <h2>📅 Programmazione</h2>
+        </div>
+        <div class="card-body">
+          <p class="card-desc">
+            Programma irrigazioni automatiche in giorni e orari specifici.
+          </p>
+
+          <!-- New schedule form -->
+          <div class="schedule-form">
+            <div class="form-row">
+              <label class="form-label">Giorni</label>
+              <div class="days-picker" id="days-picker">
+                <button type="button" class="day-btn" data-day="1">Lun</button>
+                <button type="button" class="day-btn" data-day="2">Mar</button>
+                <button type="button" class="day-btn" data-day="3">Mer</button>
+                <button type="button" class="day-btn" data-day="4">Gio</button>
+                <button type="button" class="day-btn" data-day="5">Ven</button>
+                <button type="button" class="day-btn" data-day="6">Sab</button>
+                <button type="button" class="day-btn" data-day="0">Dom</button>
+              </div>
+            </div>
+            <div class="form-row form-row-inline">
+              <div class="form-field">
+                <label class="form-label">Orario</label>
+                <input
+                  type="time"
+                  id="schedule-time"
+                  value="06:30"
+                  class="input"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Durata (min)</label>
+                <input
+                  type="number"
+                  id="schedule-duration"
+                  min="1"
+                  max="120"
+                  value="15"
+                  class="input"
+                />
+              </div>
+            </div>
+            <button class="btn btn-add" onclick="addSchedule()">
+              <span class="btn-icon">➕</span> Aggiungi Programmazione
+            </button>
+          </div>
+
+          <div class="feedback" id="schedule-feedback"></div>
+
+          <!-- Existing schedules list -->
+          <div class="schedules-list" id="schedules-list">
+            <p class="empty-msg" id="empty-schedules">
+              Nessuna programmazione configurata.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>🌿 Irrigazione Smart — ESP32 Dashboard</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
