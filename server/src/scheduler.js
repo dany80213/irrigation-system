@@ -30,20 +30,11 @@ async function runTimedIrrigation(durationMinutes, label = "scheduler") {
   console.log(`[${label}] Pompa ON per ${durationMinutes} min`);
 
   try {
-    await setPumpState("on");
+    await setPumpState("on", durationMs);
   } catch (err) {
     console.error(`[${label}] Errore avvio pompa:`, err.message);
     return;
   }
-
-  setTimeout(async () => {
-    try {
-      await setPumpState("off");
-      console.log(`[${label}] Pompa OFF dopo ${durationMinutes} min`);
-    } catch (err) {
-      console.error(`[${label}] Errore spegnimento pompa:`, err.message);
-    }
-  }, durationMs);
 }
 
 /**

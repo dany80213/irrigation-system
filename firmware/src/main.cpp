@@ -2,102 +2,125 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 
-// ===== WiFi config =====
-const char* ssid = "TUO_WIFI";
-const char* password = "TUA_PASSWORD";
+// ====== CONFIG WIFI ======
+const char* ssid = "";
+const char* password = "";
 
-// ===== Hardware =====
-static const int PUMP_PIN = 27;
+// ====== PIN ======
+const int pumpPin = 27;
 
-// ===== HTTP server =====
+// ====== SERVER ======
 WebServer server(80);
 
-// ===== State =====
-String pumpState = "idle"; // idle | on | off
+// ====== STATO ======
+String pumpState = "idle";  // idle | on | off
+uint32_t durationMs = -1;
+uint32_t now;
+uint32_t pumpOffAtMs;
+bool pumpOn = false;
 
-void sendJson(int code, const JsonDocument& doc) {
-  String out;
-  serializeJson(doc, out);
-  server.send(code, "application/json", out);
-}
-
+// ====== HANDLER STATUS ======
 void handleStatus() {
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<200> doc;
   doc["state"] = pumpState;
-  sendJson(200, doc);
+
+  String response;
+  serializeJson(doc, response);
+
+  server.send(200, "application/json", response);
 }
 
+// ====== HANDLER PUMP ======
 void handlePump() {
-  // Expect: POST /pump with JSON {"state":"on"|"off"}
   if (server.method() != HTTP_POST) {
-    StaticJsonDocument<128> doc;
-    doc["error"] = "Method not allowed";
-    sendJson(405, doc);
+    server.send(405, "application/json", "{\"error\":\"Method not allowed\"}");
     return;
   }
 
-  const String body = server.arg("plain");
+  // Legge il body JSON
+  String body = server.arg("plain");
 
-  StaticJsonDocument<256> in;
-  const auto err = deserializeJson(in, body);
-  if (err) {
-    StaticJsonDocument<128> doc;
-    doc["error"] = "Invalid JSON";
-    sendJson(400, doc);
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, body);
+
+  if (error) {
+    server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
     return;
   }
 
-  const char* state = in["state"];
-  if (!state) {
-    StaticJsonDocument<128> doc;
-    doc["error"] = "Missing 'state'";
-    sendJson(400, doc);
-    return;
+  String state = doc["state"];
+  uint32_t  durationJson = doc["durationMs"];
+  //const char* durationStr = doc["durationMs"];
+  if (!durationJson) {
+    durationMs = -1;
+  }else{
+    durationMs = durationJson;
   }
 
-  if (strcmp(state, "on") == 0) {
-    digitalWrite(PUMP_PIN, HIGH);
+
+
+  
+  
+
+  if (state == "on") {
+    digitalWrite(pumpPin, HIGH);
     pumpState = "on";
-  } else if (strcmp(state, "off") == 0) {
-    digitalWrite(PUMP_PIN, LOW);
+    now = millis();
+    pumpOn = true;
+    pumpOffAtMs = now + durationMs;
+  } 
+  else if (state == "off") {
+    digitalWrite(pumpPin, LOW);
     pumpState = "off";
-  } else {
-    StaticJsonDocument<160> doc;
-    doc["error"] = "Invalid state";
-    doc["allowed"][0] = "on";
-    doc["allowed"][1] = "off";
-    sendJson(400, doc);
+    pumpOn = false;
+  } 
+  else {
+    server.send(400, "application/json", "{\"error\":\"Invalid state\"}");
     return;
   }
 
-  StaticJsonDocument<128> out;
-  out["state"] = pumpState;
-  sendJson(200, out);
+  StaticJsonDocument<200> responseDoc;
+  responseDoc["state"] = pumpState;
+
+  String response;
+  serializeJson(responseDoc, response);
+
+  server.send(200, "application/json", response);
 }
 
 void setup() {
   Serial.begin(115200);
 
-  pinMode(PUMP_PIN, OUTPUT);
-  digitalWrite(PUMP_PIN, LOW); // fail-safe
+  pinMode(pumpPin, OUTPUT);
+  digitalWrite(pumpPin, LOW);
 
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
   Serial.println();
-  Serial.print("IP: ");
+  Serial.print("Connected! IP: ");
   Serial.println(WiFi.localIP());
 
+  // Routes
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/pump", HTTP_POST, handlePump);
 
   server.begin();
-  Serial.println("HTTP server started");
 }
 
 void loop() {
   server.handleClient();
+
+  if(pumpOn && (int32_t)(millis() - pumpOffAtMs) >= 0 && durationMs != -1){
+    digitalWrite(pumpPin, LOW);
+    pumpOn = false;
+    pumpState = "off";
+  }
+
+
 }

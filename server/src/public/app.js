@@ -124,14 +124,14 @@ function setOffline() {
 /* ═══════════════════════════════════════════════════
    API — Manual Pump
    ═══════════════════════════════════════════════════ */
-async function sendPump(state) {
+async function sendPump(state,) {
   showFeedback($manualFb, `Invio comando ${state.toUpperCase()}…`, "info");
 
   try {
     const res = await fetch(`${API}/api/pump`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state }),
+      body: JSON.stringify({ state}),
     });
     const json = await res.json();
 

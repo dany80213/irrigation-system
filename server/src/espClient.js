@@ -10,7 +10,7 @@ async function getStatus() {
   return res.json();
 }
 
-async function setPumpState(state) {
+async function setPumpState(state, durationMs) {
   if (state !== "on" && state !== "off") {
     throw new Error("Invalid pump state");
   }
@@ -20,7 +20,7 @@ async function setPumpState(state) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ state })
+    body: JSON.stringify({ state, durationMs })
   });
 
   if (!res.ok) {
